@@ -1,0 +1,30 @@
+(document "POST.md"
+
+  {
+    name "pbm"
+    dir "pbm"
+    cmd [ "wren main.wren" ]
+    expose (sections "main.wren")
+  }
+
+  {
+    name "pgm"
+    dir "pgm"
+    cmd [ "wren main.wren" ]
+    expose (sections "main.wren")
+  }
+
+  {
+    name "ppm"
+    dir "ppm"
+    cmd [ "wren main.wren" ]
+    expose (sections "main.wren")
+  }
+
+  {
+    name "rectangle"
+    dir "rectangles"
+    cmd [ "wren main.wren" ]
+    expose (sections "main.wren")
+  }
+)
