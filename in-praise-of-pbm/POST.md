@@ -3,9 +3,9 @@ title: "Algorithmic images, part 1: In praise of Netpbm"
 author: gdritter
 ---
 
-Literal actual years ago, [a friend of mine]() asked me for a blog post about how I generate images with code. I've started writing this blog post on multiple occasions, and I keep wanting to add more stuff, more asides, more examples, and it grows well beyond what a post should be. So instead, I'm going to break it up into multiple posts.
+Literal actual years ago, a friend of mine asked me for a blog post about how I generate images with code. I've started writing this blog post on multiple occasions, and I keep wanting to add more stuff, more asides, more examples, and it grows well beyond what a post should be. So instead, I'm going to break it up into multiple posts.
 
-1. [In praise of Netpbm]()
+1. [In Praise of Netpbm](/how-i-do-generative-art-in-praise-of-netpbm)
 2. Cairo, SVG, and generated vector images: _planned_
 3. Practical PostScript—no, why are you laughing, I'm serious: _planned_
 4. How I approach procedural images: _planned_
@@ -32,7 +32,7 @@ For didactic reasons that'll become apparent later in the blog post, I'm going t
 
 So, pixels. A raster image is just a two-dimensional array, right? How hard can that be? Let's start by making an array of arrays that will be our image[^arr]. Since this is black-and-white, each element will be one of two numbers: for this example, I'll use `0` for white and `1` for black. I'll initialize a basic 3×3 image with all white pixels, by which I mean, make a 3×3 2D array[^mut].
 
-```wren
+```javascript
 «pbm/init»
 ```
 
@@ -42,7 +42,7 @@ So, pixels. A raster image is just a two-dimensional array, right? How hard can 
 
 Okay, so we've got our blank image. Let's do something basic: let's make a very simple black-and-white checkerboard pattern by alternating black and white pixels. This is pretty easy to do with the modulus operator:
 
-```wren
+```javascript
 «pbm/checkers»
 ```
 
@@ -91,7 +91,7 @@ But that's really it.
 
 So, that's easy! Let's just write that to stdout in our Wren program. I'm going to separate the rows by newlines and the pixels by spaces, but as I said before, it's optional here:
 
-```wren
+```javascript
 «pbm/print»
 ```
 
@@ -107,7 +107,7 @@ Works just fine! And I could use Glimpse to convert it to another format. There'
 
 You'll notice that the PBM format is pretty barebones: it is only capable of describing black-and-white images. So, let's create a grayscale image instead, which means creating a _PGM_ file. Instead of a simple `0`-versus-`1` distinction, we'll have a scale from black to white. Unlike some other formats, the Netpbm format allows us to decide _how_ many levels of gray we have. Let's say we want to create a very similar image except instead of cycling between black and white, we cycle between multiple shades of gray: let's say, arbitrarily, four. We can start with the same blank image, but instead of filling in `0` and `1`, we fill in a wider range of numbers, which for us will range from 0 through 3.
 
-```wren
+```javascript
 «pgm/checkers»
 ```
 
@@ -115,7 +115,7 @@ In order to produce this file type, we start it with `P2` instead, which is the 
 
 [^black]: You might notice that the meaning of the numbers is swapped for the PGM format. In the PBM format above, `0` is white and `1` is black. However, if I create a PGM file where the maximum value for a pixel was `1`, then I'd have effectively created a bitmap file, but _reversed_: in a PGM file, `0` is _black_ and the maximum value is _white_. This is a peculiarity of the format, and something you simply need to remember!
 
-```wren
+```javascript
 «pgm/print»
 ```
 
@@ -125,19 +125,19 @@ The end result of this, yet again, is a bitmap like so:
 
 Creating _color_ images with Netpbm is more involved, but only slightly. When I create a color image, I need to supply three values per pixel: red, green, and blue. One way you can represent this is by treating each pixel as a struct with three fields, or a map from color to value. For our purposes, let's say that each pixel is a hashmap with three keys: `"r"`, `"g"`, and `"b"`. Because the pixel values are now things that can be updated in place, we can no longer rely on the `List.filled` trick in order to repeat the same value: if we did that, we would a list that contains many copies of the same hash, whereas we actually want to create a new hash for literally every pixel. So instead, let's convert this to a nested loop. You'll also notice that I decided to define a color depth at the top of the file here, so we can use that variable later:
 
-```wren
+```javascript
 «ppm/init»
 ```
 
 I'm going to arbitrarily choose something weird to draw here: let's say that I want the image to get more red as you go to the right, more green as you go down, and the blue-ness of pixels will alternate in a checkerboard pattern.
 
-```wren
+```javascript
 «ppm/checkers»
 ```
 
 Once we do that, printing the image is easy, and indeed is nearly identical to the PGM version. We need the header `P3`, and we still need a maximum value for the brightness of pixels, but only one which serves as the maximum value for all three colors. The biggest change is that each pixel is now _three_ numbers, not one, but we can accommodate that pretty easily:
 
-```wren
+```javascript
 «ppm/print»
 ```
 
@@ -155,13 +155,13 @@ But there's a good reason to know about the Netpbm format, and a good reason why
 
 If I want something a bit more sophisticated, I can start to build my own versions of higher-level operations. For example, let's say I want to encapsulate the image in a class, say, with a `pixel(x, y, color)` method I can call. It'd be pretty easy for me to add a `rectangle` method, like so:
 
-```wren
+```javascript
 «rectangle/rectangle»
 ```
 
 Then I could create an image with a handful of randomly-placed rectangles with random shades:
 
-```wren
+```javascript
 «rectangle/main»
 ```
 
@@ -171,7 +171,9 @@ This program, when run, produces output that looks like this:
 
 I chose Wren here mostly because it's vaguely comprehensible if you know just about any object-oriented scripting language but _also_ to show how little support you need to start making these images. I've built Netpbm images using languages which have other robust image library support (like Rust and Python) but I've also used languages where libraries were scarce and I didn't feel like building a PNG encoder or mucking with an FFI: languages like Wren, but also various obscure Scheme variants, Pony, and Idris.
 
-In fact, the examples at the beginning of this post were all written in exactly this way, and in different languages: the three-state cellular automata were [written in Rust](https://github.com/aisamanra/posts/tree/main/in-praise-of-pbm/examples/threecell/src/main.rs), the glyphs [in Ruby](https://github.com/aisamanra/posts/blob/main/in-praise-of-pbm/examples/glyphs/main.rb), and the maze-ish pattern [in Python](https://github.com/aisamanra/posts/blob/main/in-praise-of-pbm/examples/mazelike/mazelike.py), all of them created by writing out Netpbm files to stdout!
+In fact, the examples at the beginning of this post were all written in exactly this way, and in different languages: the three-state cellular automata were [written in Rust](https://github.com/aisamanra/posts/tree/main/in-praise-of-pbm/examples/threecell/src/main.rs), the glyphs [in Ruby](https://github.com/aisamanra/posts/blob/main/in-praise-of-pbm/examples/glyphs/main.rb), and the maze-ish pattern [in Python](https://github.com/aisamanra/posts/blob/main/in-praise-of-pbm/examples/mazelike/mazelike.py), all of them created by writing out Netpbm files without any library support![^rustnit]
+
+[^rustnit]: The Rust one _does_ use the `rand` library, but it doesn't use a library for _images_, at least.
 
 # When would I use a bitmap library?
 

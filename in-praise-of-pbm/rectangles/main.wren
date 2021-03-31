@@ -52,7 +52,7 @@ var depth = 8
 
 // «main»
 var image = GrayscaleImage.new(width, height, depth)
-// create up to 6 rectancles
+// create up to 6 rectangles
 for (i in 0..rand.int(3, 6)) {
   // choose the color from the depth
   var color = rand.int(2, 8)
