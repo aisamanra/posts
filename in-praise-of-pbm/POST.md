@@ -154,7 +154,7 @@ There's no shortage of good libraries for manipulating images, many of which hav
 
 But there's a good reason to know about the Netpbm format, and a good reason why I've used it in a lot of my pixel art generation projects: you can use it from _literally anywhere_ and without thinking about it much at all! Look at the above programs: I used a language without a native image library and I didn't even use _file IO_, and yet I was able to create bitmap images in less than two dozen lines.
 
-If I want something a bit more sophisticated, I can _easily_ build my own abstractions with just a few functions that can provide me higher-level operations. For example, let's say I want to encapsulate the image in a class, say, with a `pixel(x, y, color)` method I can call. It'd be pretty easy for me to add a `rectangle` method, like so:
+If I want something a bit more sophisticated, I can start to build my own versions of higher-level operations. For example, let's say I want to encapsulate the image in a class, say, with a `pixel(x, y, color)` method I can call. It'd be pretty easy for me to add a `rectangle` method, like so:
 
 ```wren
 «rectangle/rectangle»
@@ -166,11 +166,13 @@ Then I could create an image with a handful of randomly-placed rectangles with r
 «rectangle/main»
 ```
 
-Which, when run, looks like this:
+This program, when run, produces output that looks like this:
 
 ![Several gray rectangles randomly positioned on a black field.](images/rects.png)
 
 I chose Wren here mostly because it's vaguely comprehensible if you know just about any object-oriented scripting language but _also_ to show how little support you need to start making these images. I've built Netpbm images using languages which have other robust image library support (like Rust and Python) but I've also used languages where libraries were scarce and I didn't feel like building a PNG encoder or mucking with an FFI: languages like Wren, but also various obscure Scheme variants, Pony, and Idris.
+
+In fact, the examples at the beginning of this post were all written in exactly this way, and in different languages: the three-state cellular automata were [written in Rust](), the glyphs [in Ruby](), and the maze-ish pattern [in Python](), all of them created by writing out Netpbm files to stdout!
 
 # When would I use a bitmap library?
 
