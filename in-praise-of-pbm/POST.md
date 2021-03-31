@@ -9,7 +9,6 @@ Literal actual years ago, [a friend of mine]() asked me for a blog post about ho
 2. Cairo, SVG, and generated vector images: _planned_
 3. Practical PostScript—no, why are you laughing, I'm serious: _planned_
 4. How I approach procedural images: _planned_
-5. How I've done generative 3D stuff and what you should do instead: _planned_
 
 # Generative pixel art
 
