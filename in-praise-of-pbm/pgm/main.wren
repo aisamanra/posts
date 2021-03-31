@@ -3,7 +3,11 @@ var height = 12
 var image = []
 
 for (y in 0...height) {
-  image.add(List.filled(width, 0))
+  var row = []
+  for (x in 0...width) {
+    row.add(0)
+  }
+  image.add(row)
 }
 
 // «checkers»

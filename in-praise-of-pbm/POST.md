@@ -3,7 +3,7 @@ title: "Algorithmic images, part 1: In praise of Netpbm"
 author: gdritter
 ---
 
-Literal actual years ago, [a friend of mine]() asked me for a blog post about how I generate images with code. I've started writing this blog post on multiple occasions, and I keep getting swamped. So instead, I'm going to break it up into multiple parts.
+Literal actual years ago, [a friend of mine]() asked me for a blog post about how I generate images with code. I've started writing this blog post on multiple occasions, and I keep wanting to add more stuff, more asides, more examples, and it grows well beyond what a post should be. So instead, I'm going to break it up into multiple posts.
 
 1. [In praise of Netpbm]()
 2. Cairo, SVG, and generated vector images: _planned_
@@ -11,35 +11,37 @@ Literal actual years ago, [a friend of mine]() asked me for a blog post about ho
 4. How I approach procedural images: _planned_
 5. How I've done generative 3D stuff and what you should do instead: _planned_
 
+# Generative pixel art
+
+Sometimes the generative art I want to make is just pixel-based. For example, let's say I want to create some interesting [cellular automata](https://en.wikipedia.org/wiki/Cellular_automaton):
+
+![Three examples of three-state cellular automata.](images/cellular-automata.png)
+
+Or perhaps I want to make some cool-looking glyphs, the kind you'd see used as writing in the background of a pixel-art-heavy game like [Hyper Light Drifter](https://heartmachine.com/hyper-light) or [Fez](http://fezgame.com/):
+
+![Twelve examples of random blocky symbols.](images/glyphs.png)
+
+Or maybe something kind of maze-like:
+
+![A twisting black-and-white pattern which resembles a maze.](images/mazelike.png)
+
+There are a lot of ways to go about this, but for images like these I've got a particular approach which is barebones and flexible.
+
 # Say you want to generate some pixel art
 
-For didactic reasons that'll become apparent later in the blog post, I'm going to write code here in [Wren](https://wren.io/). Wren's a little object-oriented scripting language that's designed to be embedded in larger programs. I'm mostly not gonna explain it much, but it should be easy to follow it like it's pseudocode: it's an imperative object-oriented language that feels somewhere between Ruby and JavaScript with a pretty standard curly-brace syntax. I'm not gonna embed it, though: I just want to use it to create some basic black-and-white pixel art, so I'm gonna use [wren-cli](https://wren.io/cli/) to run scripts directly with access to its pretty minimal standard library.
+For didactic reasons that'll become apparent later in the blog post, I'm going to write code here in [Wren](https://wren.io/). Wren's a little object-oriented scripting language that's designed to be embedded in larger programs. I'm mostly not gonna explain it much, but it should be easy to follow it like it's pseudocode: it's an imperative object-oriented language that feels somewhere between Ruby and JavaScript with a pretty standard curly-brace syntax. I'm not gonna embed it as a scripting language, though: I just want to use it to create some basic black-and-white pixel art, so I'm gonna use [wren-cli](https://wren.io/cli/) to run scripts directly with access to its pretty minimal standard library.
 
-So, pixels. A raster image is just a two-dimensional array, right? How hard can that be? Let's start by making an array of arrays. Since this is black-and-white, each element will be one of two numbers: for this example, I'll use `0` for white and `1` for black. I'll initialize a basic 3×3 image with all white pixels, by which I mean, make a 3×3 2D array.
+So, pixels. A raster image is just a two-dimensional array, right? How hard can that be? Let's start by making an array of arrays that will be our image[^arr]. Since this is black-and-white, each element will be one of two numbers: for this example, I'll use `0` for white and `1` for black. I'll initialize a basic 3×3 image with all white pixels, by which I mean, make a 3×3 2D array[^mut].
 
 ```wren
 «pbm/init»
 ```
 
-In this case, the method `List.filled(n, x)` is a way of creating a list of length `n` where each value is `x`. This raises a question: since `List.filled` is shorthand for making a list of an arbitrary size, why can't I define the entire image with `List.filled(height, List.filled(width, false))`? The answer is an answer that transcends the choice of programming language: that expression creates a list of `height` copies of _the same list_. That means if we change one of the contained lists, the same change will be reflected in _all_ of them, like this:
+[^arr]: Okay, you don't _have_ to use a 2D array. For example, you could also use a flat array of `width * height` elements: assuming you're storing this in row-major order, you can get the element at the position `(x, y)` by using the index `x + y * height`. Alternately, if you don't mind being inefficient—and if you're using the approach I outline here, you're probably more interested in your time than the computer's time!—you can use a hashmap or dictionary whose keys are pairs of numbers. I regularly choose different representations for images depending on what one-off image I'm trying to generate.
 
-```wren
-> var x = List.filled(3, List.filled(3, 0))
-> x
-[[0, 0, 0],
- [0, 0, 0],
- [0, 0, 0]]
-> x[0][0] = 1
-1
-> x
-[[1, 0, 0],
- [1, 0, 0],
- [1, 0, 0]]
-```
+[^mut]: A lot of languages have some way of automatically creating a list of `n` copies of a repeated element, and Wren is no exception, but you might notice I didn't use it here, in large part because there's a common gotcha with these functions: they often don't deep-clone their argument, which can cause problems where mutations mutate more elements than you'd expect. In Wren's case, I could create a 2D array of zeroes by writing `List.filled(height, List.filled(width, 0))`, but in this case every row is a reference to the same row in memory, so every row of the image would end up being identical. This is a problem common to other imperative languages, so Ruby's `Array.new(height, Array.new(width, 0))` or Python `[[0] * 3] * 3` would have similar problems: because all rows are aliases for the same row in memory, modifying `image[0][0]` would also modify `image[1][0]` and `image[2][0]`. …probably not what you want!
 
-See how we modified `x[0][0]`, but `x[1][0]` and `x[2][0]` changed as well: that's not what we want! That's why I used the outer loop above: that means each row is a brand-new list.
-
-Okay, so we've got our blank image. Let's do something basic: let's make a very simple black-and-white checkerboard pattern on a pixel-by-pixel basis. This is pretty easy to do with the modulus operator:
+Okay, so we've got our blank image. Let's do something basic: let's make a very simple black-and-white checkerboard pattern by alternating black and white pixels. This is pretty easy to do with the modulus operator:
 
 ```wren
 «pbm/checkers»
@@ -65,7 +67,7 @@ Okay! We've got our pixel array: let's turn it into an image!
 
 # Netpbm to the rescue
 
-[Netpbm](https://en.wikipedia.org/wiki/Netpbm) is an image format, or rather, a family of image formats: seven in all. For the purposes of this blog post, I only care about the first three (although I'll talk about the last four a bit later.) Let's start with the PBM formta itself, where PBM stands for "Portable BitMap". This is a format for bitmap images, in the very literal sense of 'a map of bits':  each pixel is 1 bit (i.e. black or white, on or off.) Netpbm is a text-oriented format, so I can write it with a text editor. Here is a hand-written Netpbm file which describes the basic 3×3 image I was generating above:
+[Netpbm](https://en.wikipedia.org/wiki/Netpbm) is an image format, or rather, a family of image formats: seven in all. For the purposes of this blog post, I only care about the first three (although I'll describe the last four a bit later.) Let's start with the PBM format itself, where PBM stands for "Portable BitMap". This is a format for bitmap images, in the very literal sense of 'a map of bits': each pixel is 1 bit (i.e. black or white, on or off.) Netpbm is a text-oriented format, so I can write it with a text editor. Here is a hand-written Netpbm file which describes the basic 3×3 image I was generating above:
 
 ```
 P1
@@ -77,7 +79,7 @@ P1
 
 …and that's it. The `P1` at the top says, "I am a Netpbm file," the next line has the width and height of the image in pixels, and then after that are all the values for each individual pixel, `0` for white and `1` for black.
 
-Okay, there's a _little_ bit more to it, but not much: for one, Netpbm files can have comments, which are commonly used to indicate which program created them (although they can't come first: the first two bytes of the file _have_ to be `P1` for it to be recognized by parsers). It's also worth noting that all the whitespace after the width and height is basically optional, and you don't _need_ to line up the pixels nicely like I did above. The following defines the same image:
+Okay, there's a _little_ bit more to it, but not much: for one, Netpbm files can have comments, which are commonly used to indicate which program created them (although they can't come first: the first two bytes of the file _have_ to be `P1` for it to be recognized by parsers). It's also worth noting that all the whitespace after the width and height is optional, and you don't _need_ to line up the pixels nicely like I did above. The following defines the same image:
 
 ```
 P1
@@ -88,17 +90,19 @@ P1
 
 But that's really it.
 
-So, that's easy! Let's just write that to stdout in our Wren program. I'm going to separate the rows by newlines and the pixels by spaces, but as I said before, it's totally optional:
+So, that's easy! Let's just write that to stdout in our Wren program. I'm going to separate the rows by newlines and the pixels by spaces, but as I said before, it's optional here:
 
 ```wren
 «pbm/print»
 ```
 
-Because I've parameterized it by the width and height, I can also tweak those to make my image larger. And now that I've got a PBM file, I can open it in any program which supports the format, which is honestly more programs than you'd expect. I can't view it directly in the browser or anything, but every image viewer I've used in Linux supports it. I've got [Glimpse](https://glimpse-editor.org/) installed, why not try that?
+Because I've parameterized it by the width and height, I can also tweak those to make my image larger. And now that I've got a PBM file, I can open it in any program which supports the format: and you might be surprised which programs _do_ support it. I can't view it directly in the browser or anything, but there plenty of viewers and editors that do understand it. I've got [Glimpse](https://glimpse-editor.org/) installed, why not try that?
 
-**INSERT IMAGE**
+![A 3x3 pixel checkerboard, viewed in the Glimpse editor.](images/pbm-in-gimp.png)
 
-Works just fine! And I could use Glimpse to convert it to another format. There's also a suite of tools called [netpbm](http://netpbm.sourceforge.net/) which are commonly available on Unix-like systems, so I could always run that to convert them to, say, PNG or some other format.
+Works just fine! And I could use Glimpse to convert it to another format. There's also a suite of tools called [netpbm](http://netpbm.sourceforge.net/) which are commonly available on Unix-like systems, so I could always run that to convert them to some other format.[^old]
+
+[^old]: That said, the Netpbm tools are very old: at this point, it's likely that you probably haven't even heard of most of the image formats they have converters for!
 
 # What if I want grays or colors?
 
@@ -118,7 +122,7 @@ In order to produce this file type, we start it with `P2` instead, which is the 
 
 The end result of this, yet again, is a bitmap like so:
 
-**INSERT IMAGE**
+![A sample bitmap image of cycling shades of gray.](images/pgm-sample.png)
 
 Creating _color_ images with Netpbm is more involved, but only slightly. When I create a color image, I need to supply three values per pixel: red, green, and blue. One way you can represent this is by treating each pixel as a struct with three fields, or a map from color to value. For our purposes, let's say that each pixel is a hashmap with three keys: `"r"`, `"g"`, and `"b"`. Because the pixel values are now things that can be updated in place, we can no longer rely on the `List.filled` trick in order to repeat the same value: if we did that, we would a list that contains many copies of the same hash, whereas we actually want to create a new hash for literally every pixel. So instead, let's convert this to a nested loop. You'll also notice that I decided to define a color depth at the top of the file here, so we can use that variable later:
 
@@ -140,7 +144,7 @@ Once we do that, printing the image is easy, and indeed is nearly identical to t
 
 And the end result:
 
-**INSERT IMAGE**
+![A sample bitmap image of shifting colors.](images/ppm-sample.png)
 
 And there we go! We can produce bitmap images easily, with no library support at all!
 
@@ -162,9 +166,23 @@ Then I could create an image with a handful of randomly-placed rectangles with r
 «rectangle/main»
 ```
 
-I chose Wren here mostly because it's vaguely comprehensible if you know just about any object-oriented scripting language but _also_ to show how little support you need to start making these images. I've built Netpbm images using languages which clearly have other robust image library support (like Rust and Python) but I've also used languages where libraries were scarce and I didn't feel like building a PNG encoder or mucking with an FFI: languages like Wren, but also various obscure Scheme variants, Pony, and Idris.
+Which, when run, looks like this:
 
-# What about the other four Netpbm variants?
+![Several gray rectangles randomly positioned on a black field.](images/rects.png)
+
+I chose Wren here mostly because it's vaguely comprehensible if you know just about any object-oriented scripting language but _also_ to show how little support you need to start making these images. I've built Netpbm images using languages which have other robust image library support (like Rust and Python) but I've also used languages where libraries were scarce and I didn't feel like building a PNG encoder or mucking with an FFI: languages like Wren, but also various obscure Scheme variants, Pony, and Idris.
+
+# When would I use a bitmap library?
+
+One concern is that NetPBM files are _big_. Not only are they not compressed, they're also written out using ASCII text, which means there's a lot of wasted space. For example, near the beginning of this post, I included an example of cellular automata, which I generated as 99×99-pixel squares. When encoded as a PNG, this image is about 1.9K in size, and when encoded using the uncompressed BMP format, it goes up to a hefty 39K. The PPM file I originally generated is _58K_ in size, around 30× the size of the PNG. For a tiny image, that's _huge_. This isn't a huge problem long-term, because you can easily convert them to a compressed format for storage, but it's worth noting, especially if you're going to be generating a lot of them at once. (I generated 120 random cellular automata images to choose one for this post: those images, each 99 pixel squares, took up about 8M on disk!)
+
+You'll also have increasing problems as your desired drawing primitives get more complicated. The stuff I've done above all involved tight control over placing pixels or groups of pixels, but if I wanted to e.g. composite several images with various transparency modes, I'm going to have to start implementing more and more things manually. At some point, learning a good library becomes a better use of your time.[^text]
+
+[^text]: This is _especially_ true if you ever want to create images with text. At that point, I'd skip pixels and head straight to vector, even if I want the final result to have a chunky look to it!
+
+Finally, this is really only suitable for generating a static image or several in a batch-like environment: that is to say, it's probably not gonna be an ideal choice for any generative task that needs to be done in real-time (like interactive simulations or video games) or even relatively quickly (like generating images on-the-fly for a web site). Your chosen application might be better served again by finding bindings to something like [pixman](http://www.pixman.org/) instead!
+
+# Hey, what about the other four Netpbm variants?
 
 There are other variants of the Netpbm format, which of course use headers `P4` through `P7`. `P4` through `P6` are simply binary variants of `P1` through `P3`: for example, an image with the header `P4` is a packed-binary bitmap. The header section that defines the width and height is effectively identical to the ASCII version—you'd still use a base-10 ASCII representation of the width and height separated by whitespace—but afterwards you use packed binary versions of the values, and usually with a pre-specified color depth as well.
 
@@ -174,4 +192,4 @@ Honestly? I've never used them. The reason I reach for Netpbm variants is becaus
 
 # What's next for this series?
 
-I've talked about how I produce pixel-art-ish images, but that's actually a relatively small portion of the generative artwork I've done. Most of it has been vector-art-based, and there are a few approaches I've taken there. My next post is going to be about how I create vector artwork, including both a barebones generation-by-printf approach like this post as well as the library approach.
+I've talked about how I produce pixel-art-ish images, but that's actually a relatively small portion of the generative artwork I've done. Most of my generative artwork has been done with vector art, and there are a few approaches I've taken there. That's going to be the topic of my next post, and I'm going to cover the two most common approaches I've taken, one that's similar to the approach described here, and another that's library-supported!
